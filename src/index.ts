@@ -94,20 +94,41 @@ app.post("/send-notification", async (req: Request, res: Response) => {
     }
 
     const message = {
-      token: fcmToken,
-      notification: { title: senderName, body: messagePreview },
-      data: { messageId: messageId || "", senderName, timestamp: Date.now().toString() }
+      tokens: [fcmToken],
+      notification: {
+        title: senderName,
+        body: messagePreview,
+        sound: "default" // Add this
+      },
+      data: {
+        messageId: messageId || "",
+        senderName: senderName,
+        timestamp: new Date().getTime().toString(),
+        sound: "default", // Data payload too
+        click_action: "FLUTTER_NOTIFICATION_CLICK" // For deep linking
+      },
+      android: {
+        priority: "high" as const,
+
+        notification: { sound: "default" }
+      },
+      apns: {
+        payload: {
+          aps: { sound: "default" }
+        }
+      }
     };
+    ;
 
-    const response = await messaging.send(message);
+    const response = await messaging.sendEachForMulticast(message);
 
-    if (response === 'Invalid registration token detected') {
-      // Clean invalid token
+    if (response.failureCount > 0) {
+      // Clean invalid token if send failed
       await receiverRef.child('fcmToken').remove();
-      return res.status(410).json({ error: 'Invalid FCM token - client needs to refresh' });
+      return res.status(410).json({ error: 'Failed to send notification - FCM token may be invalid' });
     }
 
-    res.json({ success: true, messageId: response });
+    res.json({ success: true, messageId: response.responses[0]?.messageId });
   } catch (error) {
     console.error("Full error:", error);
     res.status(500).json({ error: (error as Error).message });
