@@ -101,11 +101,18 @@ app.post("/send-notification", async (req: Request, res: Response) => {
 
     const userData = snapshot.val();
     const fcmToken = userData?.fcmToken;
+    const notificationsEnabled = userData?.notificationsEnabled;
 
     if (!fcmToken) {
       return res.status(400).json({
         error: "FCM token not found for user",
       });
+    }
+
+    if(!notificationsEnabled){
+      return res.status(400).json({
+        error: "Notification disabled"
+      })
     }
 
     /* ---- WEB PUSH MESSAGE ---- */
