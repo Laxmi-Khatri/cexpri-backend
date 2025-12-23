@@ -124,7 +124,8 @@ app.post("/send-notification", async (req: Request, res: Response) => {
 
     if (response.failureCount > 0) {
       // Clean invalid token if send failed
-      await receiverRef.child('fcmToken').remove();
+      // await receiverRef.child('fcmToken').remove();
+      console.log("FCM send failure details:", response.responses);
       return res.status(410).json({ error: 'Failed to send notification - FCM token may be invalid' });
     }
 
