@@ -153,6 +153,45 @@ app.post("/send-notification", async (req: Request, res: Response) => {
   }
 });
 
+/* -------------------- WEB Notification (By Token - GET) -------------------- */
+/**
+ * Example:
+ * /send-notification-by-token?token=FCM_TOKEN&message=Hello
+ */
+app.get("/send-notification-by-token", async (req: Request, res: Response) => {
+  try {
+    if (!req.query.token || !req.query.message) {
+      return res.status(400).json({ error: "token and message required" });
+    }
+
+    const fcmToken = decodeURIComponent(String(req.query.token));
+    const messagePreview = String(req.query.message);
+
+    console.log("FCM TOKEN:", fcmToken);
+
+    const message = {
+      token: fcmToken,
+      notification: {
+        title: "New Message",
+        body: messagePreview,
+      },
+      webpush: {
+        fcmOptions: {
+          link: "https://cexpri.web.app",
+        },
+      },
+    };
+
+    const response = await messaging.send(message);
+
+    res.json({ success: true, messageId: response });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Send failed" });
+  }
+});
+
+
 /* -------------------- Health Check -------------------- */
 app.get("/health", (_: Request, res: Response) => {
   res.send("Server is running");
