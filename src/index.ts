@@ -73,23 +73,23 @@ app.get("/token", (req: Request, res: Response) => {
 app.post("/send-notification", async (req: Request, res: Response) => {
   try {
     const { receiverId, senderName, messagePreview, messageId } = req.body;
-    
+
     // Fetch receiver data
     const receiverRef = db.ref(`users/${receiverId}`);
     const snapshot = await receiverRef.once("value");
-    
+
     if (!snapshot.exists()) {
       return res.status(404).json({ error: `User ${receiverId} not found` });
     }
-    
+
     const userData = snapshot.val();
-    
+
     const fcmToken = userData?.fcmToken;
 
     if (!fcmToken) {
-      return res.status(400).json({ 
-        error: "No fcmToken found", 
-        userKeys: Object.keys(userData || {}) 
+      return res.status(400).json({
+        error: "No fcmToken found",
+        userKeys: Object.keys(userData || {})
       });
     }
 
@@ -100,7 +100,7 @@ app.post("/send-notification", async (req: Request, res: Response) => {
     };
 
     const response = await messaging.send(message);
-    
+
     if (response === 'Invalid registration token detected') {
       // Clean invalid token
       await receiverRef.child('fcmToken').remove();
@@ -148,21 +148,32 @@ app.post("/send-notification-batch", async (req: Request, res: Response) => {
 
     // Send notifications
     const message = {
+      tokens: fcmTokens,
       notification: {
         title: senderName,
-        body: messagePreview || "New message",
+        body: messagePreview,
+        sound: "default" // Add this
       },
       data: {
         messageId: messageId || "",
         senderName: senderName,
         timestamp: new Date().getTime().toString(),
+        sound: "default", // Data payload too
+        click_action: "FLUTTER_NOTIFICATION_CLICK" // For deep linking
       },
+      android: {
+        priority: "high" as const,
+        notification: { sound: "default" }
+      },
+      apns: {
+        payload: {
+          aps: { sound: "default" }
+        }
+      }
     };
 
-    const response = await messaging.sendEachForMulticast({
-      ...message,
-      tokens: fcmTokens,
-    });
+
+    const response = await messaging.sendEachForMulticast(message);
 
     console.log("Batch notifications sent:", response);
 
